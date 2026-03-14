@@ -1,7 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
+import xml.etree.ElementTree as ET
 
-# Lista de URLs a rastrear
 urls = [
     "https://lamenteesmaravillosa.com/neurociencias/",
     "https://lamenteesmaravillosa.com/trabajo/",
@@ -29,18 +30,37 @@ titulares = []
 for url in urls:
     try:
         r = requests.get(url, timeout=10)
-        r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
-        
-        # Extrae títulos: h1, h2 y h3 (ajustable)
-        for tag in ["h1", "h2", "h3"]:
-            for element in soup.find_all(tag):
-                text = element.get_text(strip=True)
-                if text and text not in titulares:  # evitar duplicados
-                    titulares.append(text)
-    except Exception as e:
-        print(f"No se pudo procesar {url}: {e}")
 
-# Mostrar resultados (para pruebas)
-for t in titulares:
-    print(t)
+        for a in soup.find_all("a"):
+            title = a.get_text(strip=True)
+            link = a.get("href")
+
+            if title and link and len(title) > 30:
+                if link.startswith("/"):
+                    base = "/".join(url.split("/")[:3])
+                    link = base + link
+
+                titulares.append((title, link))
+
+    except Exception as e:
+        print("Error con", url, e)
+
+
+# crear RSS
+rss = ET.Element("rss", version="2.0")
+channel = ET.SubElement(rss, "channel")
+
+ET.SubElement(channel, "title").text = "Noticias de Psicología"
+ET.SubElement(channel, "link").text = "https://github.com/"
+ET.SubElement(channel, "description").text = "Feed generado automáticamente"
+ET.SubElement(channel, "lastBuildDate").text = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+for title, link in titulares[:50]:
+    item = ET.SubElement(channel, "item")
+    ET.SubElement(item, "title").text = title
+    ET.SubElement(item, "link").text = link
+    ET.SubElement(item, "guid").text = link
+
+tree = ET.ElementTree(rss)
+tree.write("rss.xml", encoding="utf-8", xml_declaration=True)
