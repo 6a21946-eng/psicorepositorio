@@ -1,40 +1,46 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
-import xml.etree.ElementTree as ET
 
-# Archivos de entrada/salida en la raíz
-links_file = "links.txt"
-rss_file = "rss_generated.xml"  # Archivo final generado
+# Lista de URLs a rastrear
+urls = [
+    "https://lamenteesmaravillosa.com/neurociencias/",
+    "https://lamenteesmaravillosa.com/trabajo/",
+    "https://psicologiaymente.com/categoria/drogas",
+    "https://psicologiaymente.com/categoria/personalidad",
+    "https://psicologiaymente.com/categoria/organizaciones",
+    "https://psicologiaymente.com/categoria/neurociencias",
+    "https://psicologiaymente.com/categoria/forense",
+    "https://psicologiaymente.com/categoria/desarrollo",
+    "https://psicologiaymente.com/categoria/psicofarmacologia",
+    "https://psicologiaymente.com/categoria/consumidor",
+    "https://psicologiaymente.com/categoria/inteligencia",
+    "https://psicologiaymente.com/tags/historia-de-la-psicologia",
+    "https://psicologiaymente.com/tags/narcisismo",
+    "https://psicologiaymente.com/tags/teoria",
+    "https://psicologiaymente.com/tags/depresion",
+    "https://psicologiaymente.com/marketing",
+    "https://www.psicologia-online.com/pir/",
+    "https://psicologiaymente.com/tags/terapia",
+    "https://psicologiaymente.com/tags/emocion"
+]
 
-# Leer enlaces, ignorando líneas vacías
-with open(links_file) as f:
-    urls = [line.strip() for line in f if line.strip()]
+titulares = []
 
-# Crear estructura básica del RSS
-rss = ET.Element("rss", version="2.0")
-channel = ET.SubElement(rss, "channel")
-ET.SubElement(channel, "title").text = "Mi RSS personalizado"
-ET.SubElement(channel, "link").text = "https://github.com/TU_USUARIO/psicorepositorio"
-ET.SubElement(channel, "description").text = "RSS generado automáticamente de links.txt"
-
-# Procesar cada URL
 for url in urls:
     try:
         r = requests.get(url, timeout=10)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
-        title = soup.title.string.strip() if soup.title else "Sin título"
-
-        item = ET.SubElement(channel, "item")
-        ET.SubElement(item, "title").text = title
-        ET.SubElement(item, "link").text = url
-        ET.SubElement(item, "pubDate").text = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
-
+        
+        # Extrae títulos: h1, h2 y h3 (ajustable)
+        for tag in ["h1", "h2", "h3"]:
+            for element in soup.find_all(tag):
+                text = element.get_text(strip=True)
+                if text and text not in titulares:  # evitar duplicados
+                    titulares.append(text)
     except Exception as e:
-        print(f"[ERROR] {url} -> {e}")
+        print(f"No se pudo procesar {url}: {e}")
 
-# Guardar RSS
-tree = ET.ElementTree(rss)
-tree.write(rss_file, encoding="utf-8", xml_declaration=True)
-print(f"RSS generado en {rss_file}")
+# Mostrar resultados (para pruebas)
+for t in titulares:
+    print(t)
